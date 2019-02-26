@@ -10,6 +10,26 @@ import pandas as pd
 # add whatever additional imports you may need here. You may not use the
 # scikit-learn OneHotEncoder, or any related automatic one-hot encoders.
 
+def open_file(filename):
+    """Opens filename. Removes all punctuation and tokenizes by whitespace. Returns a 
+    list with the words in filename.
+    """
+    with open(filename,'r') as f:
+        words = f.read()
+        
+    word_lst = words.split()
+    words_no_pos_tags = []
+    for word in word_lst:
+        index = word.index('/')
+        word = word[:index]
+        words_no_pos_tags.append(word)
+    space = ' '
+    joined_doc = space.join(words_no_pos_tags)
+
+    print(joined_doc)
+
+    return words
+
 parser = argparse.ArgumentParser(description="Convert text to features")
 parser.add_argument("-N", "--ngram", metavar="N", dest="ngram", type=int, default=3, help="The length of ngram to be considered (default 3).")
 parser.add_argument("-S", "--start", metavar="S", dest="startline", type=int,
@@ -24,6 +44,8 @@ parser.add_argument("outputfile", type=str,
                     help="The name of the output file for the feature table.")
 
 args = parser.parse_args()
+
+open_file(args.inputfile)
 
 print("Loading data from file {}.".format(args.inputfile))
 print("Starting from line {}.".format(args.startline))
