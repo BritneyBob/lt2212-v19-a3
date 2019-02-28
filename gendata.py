@@ -3,6 +3,7 @@ import glob
 import argparse
 import numpy as np
 import pandas as pd
+from collections import Counter
 
 # gendata.py -- Don't forget to put a reasonable amount code comments
 # in so that we better understand what you're doing when we grade!
@@ -11,8 +12,8 @@ import pandas as pd
 # scikit-learn OneHotEncoder, or any related automatic one-hot encoders.
 
 def open_file(filename):
-    """Opens filename. Removes all punctuation and tokenizes by whitespace. Returns a 
-    list with the words in filename.
+    """Opens filename with string of words with part of speech tags. Returns list with 
+    words stripped from POS-tags.
     """
     with open(filename,'r') as f:
         words = f.read()
@@ -23,13 +24,56 @@ def open_file(filename):
         index = word.index('/')
         word = word[:index]
         words_no_pos_tags.append(word)
-    space = ' '
-    joined_doc = space.join(words_no_pos_tags)
 
-    print(joined_doc)
+    return words_no_pos_tags
 
-    return words
+def build_one_hot_vectors(word_list):
+    """Counts the occurences of each word in word_list and builds vocabulary. Makes one
+       hot vectors of all words in vocabulary. Makes a list of one hot vectors, in the
+       order they appear in the document. Returns vocabulary and the list of hot vectors.
+    """
+    vocabulary = Counter(word_list).most_common()
+    one_hot_vectors = {}
+    
+    for i,word in enumerate(vocabulary):
+        word = word[0]
+        vector = np.zeros((len(vocabulary),), dtype=int)
+        vector[i] = 1
+        one_hot_vectors[word] = vector
+    
+    one_hot_document = []
+    for word in word_list:
+        one_hot_document.append(one_hot_vectors[word])
+    
+    return vocabulary,one_hot_document 
 
+def build_ngrams(one_hot_document,word_list,n):
+    ngram_vectors = []
+    ngram_labels = []
+    one_hot_document = one_hot_document[:10]
+    word_list = word_list[:10]
+    
+    for i,vector in enumerate(one_hot_document[:-(n-1)]):
+        ngram_vector = np.concatenate([one_hot_document[i],one_hot_document[i+1]])
+        ngram_vectors.append(ngram_vector)
+        
+    ngram_labels = zip(*[word_list[i+2:] for i in range(n-2)])
+    ngram_labels = [''.join(label) for label in ngram_labels]
+
+    ngram_wordvectors = list(zip(ngram_labels,ngram_vectors))
+    ngram_vectors_df = pd.DataFrame(ngram_wordvectors)
+    ngram_vectors_df.columns = ["ngram","vector"]
+
+    return ngram_vectors_df
+
+def write_outputfile(ngram_wordvectors, outputfile):
+    """Writes vectors_df to outputfile.
+    """
+    # Disables summary printing, to be able to do calculations on the whole matrix in 
+    # outputfile.
+    np.set_printoptions(threshold=np.nan) 
+    ngram_wordvectors.to_csv(outputfile, index=False)
+    
 parser = argparse.ArgumentParser(description="Convert text to features")
 parser.add_argument("-N", "--ngram", metavar="N", dest="ngram", type=int, default=3, help="The length of ngram to be considered (default 3).")
 parser.add_argument("-S", "--start", metavar="S", dest="startline", type=int,
@@ -45,7 +89,10 @@ parser.add_argument("outputfile", type=str,
 
 args = parser.parse_args()
 
-open_file(args.inputfile)
+word_list = open_file(args.inputfile)
+vocabulary,one_hot_document = build_one_hot_vectors(word_list)
+ngram_vectors = build_ngrams(one_hot_document,word_list,3)
+write_outputfile(ngram_vectors, args.outputfile)
 
 print("Loading data from file {}.".format(args.inputfile))
 print("Starting from line {}.".format(args.startline))
