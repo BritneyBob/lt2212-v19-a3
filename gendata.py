@@ -12,20 +12,40 @@ from collections import Counter
 # scikit-learn OneHotEncoder, or any related automatic one-hot encoders.
 
 def open_file(filename):
-    """Opens filename with string of words with part of speech tags. Returns list with 
-    words stripped from POS-tags.
+    """Opens filename line by line with strings of words with part of speech tags. Returns
+       list with lines.
     """
     with open(filename,'r') as f:
-        words = f.read()
+        lines = f.read().splitlines()
+    
+    return lines
         
-    word_lst = words.split()
-    words_no_pos_tags = []
-    for word in word_lst:
-        index = word.index('/')
-        word = word[:index]
-        words_no_pos_tags.append(word)
+def remove_pos(lines,start,end):
+    """Returns list with words stripped from POS-tags.
+    """
+    """    
+    words = []     
+    for line in lines[start:end]:
+        line = line.split()
+        #print(line)
+        #words = words + line
+        words.append(line)
+    #print(words)"""
 
-    return words_no_pos_tags
+    lines_no_pos_tags = []
+    for line in lines:
+        line = line.split()
+        line_no_pos_tags = []
+        for word in line:
+            index = word.index('/')
+            word = word[:index]
+            line_no_pos_tags.append(word)
+        lines_no_pos_tags.append(line_no_pos_tags)
+            
+    print(lines_no_pos_tags)
+        #words_no_pos_tags.append(word)
+        
+    #return words_no_pos_tags
 
 def build_one_hot_vectors(word_list):
     """Counts the occurences of each word in word_list and builds vocabulary. Makes one
@@ -50,8 +70,8 @@ def build_one_hot_vectors(word_list):
 def build_ngrams(one_hot_document,word_list,n):
     ngram_vectors = []
     ngram_labels = []
-    one_hot_document = one_hot_document[:10]
-    word_list = word_list[:10]
+    #one_hot_document = one_hot_document[:10]
+    #word_list = word_list[:10]
     
     for i,vector in enumerate(one_hot_document[:-(n-1)]):
         ngram_vector = np.concatenate([one_hot_document[i],one_hot_document[i+1]])
@@ -89,17 +109,20 @@ parser.add_argument("outputfile", type=str,
 
 args = parser.parse_args()
 
-word_list = open_file(args.inputfile)
-vocabulary,one_hot_document = build_one_hot_vectors(word_list)
-ngram_vectors = build_ngrams(one_hot_document,word_list,3)
-write_outputfile(ngram_vectors, args.outputfile)
-
 print("Loading data from file {}.".format(args.inputfile))
+lines = open_file(args.inputfile)
 print("Starting from line {}.".format(args.startline))
+
 if args.endline:
+    word_list = remove_pos(lines,args.startline,args.endline)
     print("Ending at line {}.".format(args.endline))
 else:
     print("Ending at last line of file.")
+    word_list = remove_pos(lines,args.startline,len(lines))
+    
+#vocabulary,one_hot_document = build_one_hot_vectors(word_list)
+#ngram_vectors = build_ngrams(one_hot_document,word_list,3)
+#write_outputfile(ngram_vectors, args.outputfile)
 
 print("Constructing {}-gram model.".format(args.ngram))
 print("Writing table to {}.".format(args.outputfile))
